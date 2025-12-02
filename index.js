@@ -10,7 +10,7 @@ import { apiLimiter } from "./middleware/rateLimiter.js";
 dotenv.config();
 const app = express();
 connectDb();
-const PORT = 3000;
+const PORT = process.env.PORT;
 app.use(express.json());
 app.set("view engine","ejs");
 app.set("views",path.join(process.cwd(),"views"))
