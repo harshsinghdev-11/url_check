@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro URL Safety Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a1c18;
+            cursor: crosshair;
+        }
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 2px;
+            position: fixed;
+            pointer-events: none;
+            inset: 0;
+            z-index: 30;
+        }
+        .crt-glow {
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+        .pixel-shadow { box-shadow: 6px 6px 0px rgba(0,0,0,0.8); }
+        .pixel-shadow-sm { box-shadow: 4px 4px 0px rgba(0,0,0,0.8); }
+        .input-font {
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+        .blinking { animation: blink 1s infinite; }
+    </style>
+</head>
+
+<body class="h-screen w-full flex items-center justify-center p-4 relative overflow-hidden">
+
+<div class="scanlines"></div>
+<div class="absolute inset-0 crt-glow pointer-events-none"></div>
+
+<div class="h-screen z-10 bg-[#e6dcc0] border-4 border-gray-800 p-8 w-full pixel-shadow rounded-sm overflow-y-auto">
+
+    <div class="text-center mt-20">
+        <h1 class="text-[#d97829] text-4xl drop-shadow-[4px_4px_0_rgba(0,0,0,1)] uppercase">
+            RETRO URL
+        </h1>
+        <h3 class="mt-2 text-2xl drop-shadow-[3px_3px_0_rgba(0,0,0,1)] uppercase">Total store Url:651191</h3>
+    </div>
+
+    <div class="mt-8">
+        <label class="block text-sm text-gray-800 mb-2 uppercase">
+            Enter URL Here:
+        </label>
+        <div class="flex gap-4">
+            <input 
+                id="urlInput"
+                type="text"
+                placeholder="https://example.com"
+                class="flex-1 input-font bg-white border-4 border-black p-2 outline-none focus:bg-yellow-50 text-gray-800"
+            >
+            <button 
+                onclick="checkUrl()"
+                class="bg-[#bfa075] hover:bg-[#a88b64] border-4 border-black px-6 py-3 text-sm uppercase pixel-shadow-sm transition-all"
+            >
+                Analyze
+            </button>
+        </div>
+    </div>
+
+    <!-- Toggle Button -->
+    <div class="mt-6 flex items-center justify-center gap-4">
+        <span class="text-xs text-gray-800 uppercase">Mode:</span>
+        <div class="flex bg-[#1a1c18] border-4 border-black pixel-shadow-sm">
+            <button 
+                id="toggleWithOpt"
+                onclick="toggleOptimization(true)"
+                class="px-6 py-2 text-xs uppercase bg-[#4d9c46] text-white border-r-2 border-black transition-all"
+            >
+                Bloom Filter
+            </button>
+            <button 
+                id="toggleWithoutOpt"
+                onclick="toggleOptimization(false)"
+                class="px-6 py-2 text-xs uppercase bg-[#3a3c38] text-gray-400 transition-all"
+            >
+                Direct Query
+            </button>
+        </div>
+    </div>
+
+    <!-- Metrics Box -->
+    <div id="metricsBox" class="hidden mt-6 bg-[#f5f0e8] border-4 border-gray-600 p-6 pixel-shadow-sm">
+        <div class="text-xs text-gray-700 uppercase mb-3 flex items-center gap-2">
+            <span class="text-[#d97829]">⚡</span> <span id="metricsTitle">Performance Metrics</span>
+        </div>
+        <div id="backendMetrics" class="input-font text-lg text-gray-800 mb-2"></div>
+        <div id="frontendMetrics" class="input-font text-lg text-gray-800"></div>
+    </div>
+
+    <div id="resultContainer" class="hidden flex justify-center mt-8 border-t-4 border-gray-700/20 pt-8">
+
+        <div id="statusSafe" class="hidden">
+            <div class="bg-[#1a1c18] border-4 border-[#4d9c46] p-6 text-[#4d9c46] pixel-shadow-sm">
+                <div class="text-xs mb-2">STATUS:</div>
+                <div class="text-3xl blinking">✓ SAFE</div>
+            </div>
+        </div>
+
+        <div id="statusUnsafe" class="hidden">
+            <div class="bg-[#1a1c18] border-4 border-[#b93d3d] p-6 text-[#b93d3d] pixel-shadow-sm flex items-center gap-4">
+                <span class="text-5xl">💀</span>
+                <div>
+                    <div class="text-xs mb-2">STATUS:</div>
+                    <div class="text-3xl blinking">UNSAFE</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusLoading" class="hidden">
+            <div class="text-xl blinking text-black">SCANNING SECTORS...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let useOptimization = true;
+
+function toggleOptimization(isOptimized) {
+    useOptimization = isOptimized;
+    const withOptBtn = document.getElementById("toggleWithOpt");
+    const withoutOptBtn = document.getElementById("toggleWithoutOpt");
+
+    if (isOptimized) {
+        withOptBtn.classList.remove("bg-[#3a3c38]", "text-gray-400");
+        withOptBtn.classList.add("bg-[#4d9c46]", "text-white");
+        withoutOptBtn.classList.remove("bg-[#4d9c46]", "text-white");
+        withoutOptBtn.classList.add("bg-[#3a3c38]", "text-gray-400");
+    } else {
+        withoutOptBtn.classList.remove("bg-[#3a3c38]", "text-gray-400");
+        withoutOptBtn.classList.add("bg-[#4d9c46]", "text-white");
+        withOptBtn.classList.remove("bg-[#4d9c46]", "text-white");
+        withOptBtn.classList.add("bg-[#3a3c38]", "text-gray-400");
+    }
+}
+
+async function checkUrl() {
+    const input = document.getElementById("urlInput").value;
+    const container = document.getElementById("resultContainer");
+    const safeBadge = document.getElementById("statusSafe");
+    const unsafeBadge = document.getElementById("statusUnsafe");
+    const loadingBadge = document.getElementById("statusLoading");
+    const metricsBox = document.getElementById("metricsBox");
+    const metricsTitle = document.getElementById("metricsTitle");
+    const backendMetrics = document.getElementById("backendMetrics");
+    const frontendMetrics = document.getElementById("frontendMetrics");
+
+    if (!input) return alert("INSERT URL!");
+
+    // Start frontend time tracking
+    const frontendStartTime = performance.now();
+
+    container.classList.remove("hidden");
+    safeBadge.classList.add("hidden");
+    unsafeBadge.classList.add("hidden");
+    loadingBadge.classList.remove("hidden");
+    metricsBox.classList.add("hidden");
+
+    try {
+        // Choose endpoint based on optimization mode
+        const endpoint = useOptimization ? '/check' : '/find';
+        const response = await fetch(`${endpoint}?url=${encodeURIComponent(input)}`);
+        const data = await response.json();
+
+        // Calculate frontend total time
+        const frontendEndTime = performance.now();
+        const frontendTime = (frontendEndTime - frontendStartTime).toFixed(2);
+
+        loadingBadge.classList.add("hidden");
+
+        // Check if URL is malicious
+        if (data.message === "Malicious") {
+            unsafeBadge.classList.remove("hidden");
+        } else {
+            safeBadge.classList.remove("hidden");
+        }
+
+        // Show metrics box with typewriter effect
+        metricsBox.classList.remove("hidden");
+        
+        // Update title based on mode
+        const modeText = useOptimization ? "Bloom Filter Metrics" : "Direct Query Metrics";
+        metricsTitle.textContent = modeText;
+        
+        // Extract backend time (remove " ms" if present)
+        const backendTime = data.responseTime.replace(" ms", "");
+        
+        // Display metrics with typewriter effect
+                const backendText = useOptimization
+        ? `Backend API response time: ${backendTime} ms.\nOptimizations reduced both API latency and database lookups by minimizing unnecessary DB calls.`
+        : `Database query time: ${backendTime} ms.\n There is Db call which use .find() query`;
+
+        typeWriterEffect(backendMetrics, backendText, () => {
+        setTimeout(() => {
+            typeWriterEffect(frontendMetrics, `Frontend total time: ${frontendTime} ms`);
+        }, 200);
+        });
+
+
+    } catch (error) {
+        loadingBadge.classList.add("hidden");
+        alert("ERROR: Connection failed!");
+        console.error(error);
+    }
+}
+
+function typeWriterEffect(element, text, callback) {
+    element.innerHTML = "";
+    let i = 0;
+    const speed = 30;
+
+    function typing() {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(typing, speed);
+        } else if (callback) {
+            callback();
+        }
+    }
+    typing();
+}
+</script>
+
+</body>
+</html>

@@ -8,7 +8,7 @@ dotenv.config();
 const MONGO_URI=process.env.MONGO_URI;
 const buildBloomFilter = async ()=>{
     await mongoose.connect(process.env.MONGO_URI)
-    console.log("Db connected")
+  
     const totalDoc = await bloomfilterProject.countDocuments();
 
     const size = Math.ceil(totalDoc * 15);  // good approx
@@ -24,12 +24,12 @@ const buildBloomFilter = async ()=>{
         processed++;
 
         if (processed % 50000 === 0) {
-            console.log("Processed:", processed);
+      
             await new Promise(resolve => setTimeout(resolve, 0)); // yield event loop
         }
     }
 
-    console.log("Finished processing:", processed);
+
 
     const bloomDoc = new bloomfilterArray({
         bitArray:Buffer.from(bloom.bits),
