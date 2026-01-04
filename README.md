@@ -2,7 +2,7 @@
 
 A high-performance URL detection service designed to identify malicious URLs with extreme speed and efficiency. This project demonstrates the power of **Bloom Filters** for probabilistic checking, offering a significant performance advantage over traditional database queries.
 
-![Project Search](image.png)
+![Project Search](image.jpg)
 
 ![License](https://img.shields.io/badge/license-ISC-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)
