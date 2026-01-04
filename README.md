@@ -8,6 +8,10 @@ A high-performance URL detection service designed to identify malicious URLs wit
 ![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)
 ![Express](https://img.shields.io/badge/express-5.0-blue.svg)
 
+
+## 🌐 Live Demo
+[View Live Demo](https://url-check-0yv4.onrender.com/)
+
 ## 🚀 Features
 
 - **Ultra-Fast Detection**: Utilizes a custom **Bloom Filter** implementation (In-Memory) to check for malicious URLs in microseconds.
