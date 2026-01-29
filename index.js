@@ -1,22 +1,36 @@
 import express from "express"
-import { connectDb } from "./config/db.js"
-import bloomfilterProject from "./model/bloomfilterProject.js";
+
 import path from "path"
 import dotenv from "dotenv"
-import { responseTimer } from "./middleware/responseTimer.js";
+
+import { connectDb } from "./config/db.js"
+import bloomfilterProject from "./model/bloomfilterProject.js";
 import { initBloomFilter } from "./utility/initBloomFilter.js";
 import { getBloomFilter } from "./utility/initBloomFilter.js";
+
 import { apiLimiter } from "./middleware/rateLimiter.js";
+
+//importing cache
+import { initCache } from "./utility/initLRU.js";
+import { getcache } from "./utility/initLRU.js";
+
 dotenv.config();
 const app = express();
 connectDb();
-const PORT = process.env.PORT;
+
+
+//middlewares
 app.use(express.json());
 app.set("view engine","ejs");
 app.set("views",path.join(process.cwd(),"views"))
 app.use(express.static("public"))
+
+//init bloom filter
 await initBloomFilter();
-app.use("/check",apiLimiter)
+
+//init cache
+await initCache();
+
 app.use("/find",apiLimiter)
 
 
@@ -34,6 +48,7 @@ app.get("/count",async(req,res)=>{
     res.json({count})
 })
 
+//bloom filter query
 app.get("/check", async (req, res) => {
     const startTime = performance.now();
     const url = req.query.url;
@@ -44,26 +59,40 @@ app.get("/check", async (req, res) => {
     const responseTime = (endTime - startTime).toFixed(2);
     
     if (result) {
+        //check in cache
+        //if present return ans
+        //if not go for db 
+        //if in db found
+        //update lru cache
+        //if not return safe
         return res.json({
             message: "Malicious",
             responseTime: `${responseTime} ms`
         });
-    }
-    res.json({
+    }else{
+        res.json({
         message: "Safe",
         responseTime: `${responseTime} ms`
     });
+    }
 });
 
 
+
+//without bloom filter
 app.get("/find",async(req,res)=>{
     const startTime = performance.now();
     const url = req.query.url;
+
+    //it is a db call
     const fetchUrl = await bloomfilterProject.find({url:`${url}`}).lean();
+    console.log(fetchUrl);
     const endTime = performance.now();
     
     const responseTime = (endTime - startTime).toFixed(2);
     if(fetchUrl.length>0){
+
+
         return res.json({
             message:"Malicious",
             responseTime: `${responseTime} ms`
@@ -74,6 +103,10 @@ app.get("/find",async(req,res)=>{
         responseTime: `${responseTime} ms`
     })
 })
+
+
+
+const PORT = process.env.PORT;
 
 app.listen(PORT,()=>{
     console.log(`server is running on ${PORT}`)
