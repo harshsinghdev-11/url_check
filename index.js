@@ -11,8 +11,8 @@ import { getBloomFilter } from "./utility/initBloomFilter.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
 
 //importing cache
-import { initCache } from "./utility/initLRU.js";
-import { getcache } from "./utility/initLRU.js";
+
+import cache from "./utility/initLRU.js"
 
 dotenv.config();
 const app = express();
@@ -29,7 +29,7 @@ app.use(express.static("public"))
 await initBloomFilter();
 
 //init cache
-await initCache();
+
 
 app.use("/find",apiLimiter)
 
@@ -53,28 +53,39 @@ app.get("/check", async (req, res) => {
     const startTime = performance.now();
     const url = req.query.url;
     const bf = await getBloomFilter();
-    const result = bf.contains(url);
+    const mayBeMalicious = bf.contains(url);
 
-    const endTime = performance.now();
-    const responseTime = (endTime - startTime).toFixed(2);
-    
-    if (result) {
-        //check in cache
-        //if present return ans
-        //if not go for db 
-        //if in db found
-        //update lru cache
-        //if not return safe
+    if (!mayBeMalicious) {
+        const endTime = performance.now();
         return res.json({
-            message: "Malicious",
-            responseTime: `${responseTime} ms`
+            message: "Safe",
+            responseTime: `${(endTime - startTime).toFixed(2)} ms`
         });
-    }else{
-        res.json({
-        message: "Safe",
-        responseTime: `${responseTime} ms`
-    });
     }
+    const normalizedUrl = url.trim().toLowerCase();
+    const cached = cache.get(normalizedUrl);
+    if(cached){
+        const endTime = performance.now();
+        return res.json({
+            message:"Not safe",
+            type:cached,
+            responseTime: `${(endTime - startTime).toFixed(2)} ms`
+        });
+    }
+   const record = await bloomfilterProject.findOne({url}).lean();
+
+   let result;
+    if(record){
+        result = record.type;
+    }else{
+        result:"Safe";
+    }
+    cache.put(normalizedUrl,result);
+    const endTime = performance.now();
+    return res.json({
+        message:result,
+        responseTime: `${(endTime - startTime).toFixed(2)} ms`
+    })
 });
 
 

@@ -16,7 +16,7 @@ class lruCache{
         this.tail = new Node(null,null,0);
         this.head.next = this.tail;
         this.tail.prev = this.head;
-        this.maxBytes = 400 * 1024 * 1024; 
+        this.maxBytes = 300 * 1024 * 1024; 
         this.currentBytes = 0;
 
     }
