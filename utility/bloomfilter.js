@@ -3,6 +3,7 @@ class BloomFilter {
         this.size = size;
         this.hashCount = hashCount;
         this.bits = new Uint8Array(Math.ceil(size / 8));
+        this.isDirty = false;
     }
 
     // --- FNV-1a ---
@@ -66,11 +67,12 @@ class BloomFilter {
         return true;
     }
 
-    // ----- Helpers -----
+
     _setBit(pos) {
         const byteIndex = pos >> 3;
         const bitIndex = pos & 7;
         this.bits[byteIndex] |= (1 << bitIndex);
+        this.isDirty = true;
     }
 
     _getBit(pos) {
