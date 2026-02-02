@@ -1,243 +1,381 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro URL Safety Checker</title>
+    <title>CyberSentinel | Threat Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        glass: "rgba(255, 255, 255, 0.05)",
+                        glassBorder: "rgba(255, 255, 255, 0.1)",
+                        neonBlue: "#00f3ff",
+                        neonRed: "#ff003c",
+                        neonGreen: "#0aff0a",
+                        deepBg: "#05050a"
+                    },
+                    boxShadow: {
+                        'neon-blue': '0 0 20px rgba(0, 243, 255, 0.3)',
+                        'neon-red': '0 0 20px rgba(255, 0, 60, 0.3)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         body {
-            font-family: 'Press Start 2P', cursive;
-            background-color: #1a1c18;
-            cursor: crosshair;
+            background-color: #05050a;
+            color: #e2e8f0;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.1) 0%, transparent 50%);
         }
-        .scanlines {
-            background: linear-gradient(
-                to bottom,
-                rgba(255,255,255,0),
-                rgba(255,255,255,0) 50%,
-                rgba(0,0,0,0.2) 50%,
-                rgba(0,0,0,0.2)
-            );
-            background-size: 100% 2px;
-            position: fixed;
-            pointer-events: none;
-            inset: 0;
-            z-index: 30;
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
-        .crt-glow {
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+
+        .input-glow:focus {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
         }
-        .pixel-shadow { box-shadow: 6px 6px 0px rgba(0,0,0,0.8); }
-        .pixel-shadow-sm { box-shadow: 4px 4px 0px rgba(0,0,0,0.8); }
-        .input-font {
-            font-family: 'VT323', monospace;
-            font-size: 1.5rem;
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
-        @keyframes blink { 50% { opacity: 0; } }
-        .blinking { animation: blink 1s infinite; }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
     </style>
 </head>
 
-<body class="h-screen w-full flex items-center justify-center p-4 relative overflow-hidden">
+<body class="min-h-screen flex flex-col antialiased selection:bg-neonBlue selection:text-black">
 
-<div class="scanlines"></div>
-<div class="absolute inset-0 crt-glow pointer-events-none"></div>
-
-<div class="h-screen z-10 bg-[#e6dcc0] border-4 border-gray-800 p-8 w-full pixel-shadow rounded-sm overflow-y-auto">
-
-    <div class="text-center mt-20">
-        <h1 class="text-[#d97829] text-4xl drop-shadow-[4px_4px_0_rgba(0,0,0,1)] uppercase">
-            RETRO URL
-        </h1>
-        <h3 class="mt-2 text-2xl drop-shadow-[3px_3px_0_rgba(0,0,0,1)] uppercase">Total store Url:651191</h3>
-    </div>
-
-    <div class="mt-8">
-        <label class="block text-sm text-gray-800 mb-2 uppercase">
-            Enter URL Here:
-        </label>
-        <div class="flex gap-4">
-            <input 
-                id="urlInput"
-                type="text"
-                placeholder="https://example.com"
-                class="flex-1 input-font bg-white border-4 border-black p-2 outline-none focus:bg-yellow-50 text-gray-800"
-            >
-            <button 
-                onclick="checkUrl()"
-                class="bg-[#bfa075] hover:bg-[#a88b64] border-4 border-black px-6 py-3 text-sm uppercase pixel-shadow-sm transition-all"
-            >
-                Analyze
-            </button>
-        </div>
-    </div>
-
-    <!-- Toggle Button -->
-    <div class="mt-6 flex items-center justify-center gap-4">
-        <span class="text-xs text-gray-800 uppercase">Mode:</span>
-        <div class="flex bg-[#1a1c18] border-4 border-black pixel-shadow-sm">
-            <button 
-                id="toggleWithOpt"
-                onclick="toggleOptimization(true)"
-                class="px-6 py-2 text-xs uppercase bg-[#4d9c46] text-white border-r-2 border-black transition-all"
-            >
-                Bloom Filter
-            </button>
-            <button 
-                id="toggleWithoutOpt"
-                onclick="toggleOptimization(false)"
-                class="px-6 py-2 text-xs uppercase bg-[#3a3c38] text-gray-400 transition-all"
-            >
-                Direct Query
-            </button>
-        </div>
-    </div>
-
-    <!-- Metrics Box -->
-    <div id="metricsBox" class="hidden mt-6 bg-[#f5f0e8] border-4 border-gray-600 p-6 pixel-shadow-sm">
-        <div class="text-xs text-gray-700 uppercase mb-3 flex items-center gap-2">
-            <span class="text-[#d97829]">⚡</span> <span id="metricsTitle">Performance Metrics</span>
-        </div>
-        <div id="backendMetrics" class="input-font text-lg text-gray-800 mb-2"></div>
-        <div id="frontendMetrics" class="input-font text-lg text-gray-800"></div>
-    </div>
-
-    <div id="resultContainer" class="hidden flex justify-center mt-8 border-t-4 border-gray-700/20 pt-8">
-
-        <div id="statusSafe" class="hidden">
-            <div class="bg-[#1a1c18] border-4 border-[#4d9c46] p-6 text-[#4d9c46] pixel-shadow-sm">
-                <div class="text-xs mb-2">STATUS:</div>
-                <div class="text-3xl blinking">✓ SAFE</div>
+    <!-- Navigation -->
+    <nav class="w-full border-b border-white/5 bg-black/20 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="text-neonBlue w-6 h-6"></i>
+                <span class="font-bold text-lg tracking-wide tracking-tight">CYBER<span
+                        class="text-neonBlue">SENTINEL</span></span>
+            </div>
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+                <a href="#" class="hover:text-white transition-colors">Dashboard</a>
+                <a href="#" class="hover:text-white transition-colors">Threat Map</a>
+                <a href="#" class="hover:text-white transition-colors">API</a>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="relative flex h-2 w-2">
+                    <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-neonGreen opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-neonGreen"></span>
+                </span>
+                <span class="text-xs text-gray-400 font-mono">SYSTEM ONLINE</span>
             </div>
         </div>
+    </nav>
 
-        <div id="statusUnsafe" class="hidden">
-            <div class="bg-[#1a1c18] border-4 border-[#b93d3d] p-6 text-[#b93d3d] pixel-shadow-sm flex items-center gap-4">
-                <span class="text-5xl">💀</span>
-                <div>
-                    <div class="text-xs mb-2">STATUS:</div>
-                    <div class="text-3xl blinking">UNSAFE</div>
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col items-center justify-center p-6 relative">
+
+        <!-- Hero Section -->
+        <div class="text-center mb-12 animate-fade-in-up">
+            <h1
+                class="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-500">
+                URL Threat Intelligence
+            </h1>
+            <p class="text-gray-400 text-lg max-w-2xl mx-auto font-light">
+                Enterprise-grade real-time malicious link detection powered by Bloom Filters and Heuristic Analysis.
+            </p>
+            <p class="mt-2 text-sm text-gray-500 font-mono">Database: 651,191 Signatures Loaded</p>
+        </div>
+
+        <!-- Scanner Card -->
+        <div class="w-full max-w-3xl glass-card rounded-2xl p-1 shadow-2xl relative overflow-hidden group">
+            <div
+                class="absolute inset-0 bg-gradient-to-r from-neonBlue/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            </div>
+
+            <div class="bg-[#0b0b10]/80 backdrop-blur-xl rounded-xl p-8 border border-white/5 relative z-10">
+
+                <!-- Input Area -->
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i data-lucide="link" class="text-gray-500 w-5 h-5"></i>
+                        </div>
+                        <input id="urlInput" type="text"
+                            placeholder="Enter URL to analyze (e.g., https://example.com)..."
+                            class="w-full bg-white/5 border border-white/10 rounded-lg py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-neonBlue/50 input-glow transition-all font-mono text-sm">
+                    </div>
+                    <button onclick="checkUrl()"
+                        class="bg-neonBlue text-black font-bold py-4 px-8 rounded-lg hover:bg-[#33f6ff] transition-all shadow-[0_0_20px_rgba(0,243,255,0.2)] hover:shadow-[0_0_30px_rgba(0,243,255,0.4)] flex items-center justify-center gap-2 group/btn">
+                        <span>SCAN NOW</span>
+                        <i data-lucide="arrow-right"
+                            class="w-4 h-4 group-hover/btn:translate-x-1 transition-transform"></i>
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="mt-6 flex items-center justify-between border-t border-white/5 pt-4">
+                    <div class="flex items-center gap-4">
+                        <span class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Engine Mode</span>
+                        <div class="flex bg-black/50 rounded-lg p-1 border border-white/5">
+                            <button id="toggleWithOpt" onclick="toggleOptimization(true)"
+                                class="px-4 py-1.5 rounded-md text-xs font-medium transition-all bg-white/10 text-neonBlue shadow-sm">
+                                Bloom Filter
+                            </button>
+                            <button id="toggleWithoutOpt" onclick="toggleOptimization(false)"
+                                class="px-4 py-1.5 rounded-md text-xs font-medium text-gray-500 hover:text-white transition-all">
+                                Direct Query
+                            </button>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex text-xs text-gray-600 gap-4">
+                        <span class="flex items-center gap-1"><i data-lucide="zap" class="w-3 h-3"></i> Low
+                            Latency</span>
+                        <span class="flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> Secured</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="statusLoading" class="hidden">
-            <div class="text-xl blinking text-black">SCANNING SECTORS...</div>
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden mt-12 flex flex-col items-center">
+            <div class="relative w-16 h-16">
+                <div class="absolute inset-0 border-4 border-white/10 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-t-neonBlue rounded-full animate-spin"></div>
+            </div>
+            <p class="mt-4 text-neonBlue font-mono text-sm tracking-widest animate-pulse">ANALYZING PACKETS...</p>
         </div>
-    </div>
-</div>
 
-<script>
-let useOptimization = true;
+        <!-- Results Dashboard -->
+        <div id="resultContainer"
+            class="hidden w-full max-w-5xl mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up">
 
-function toggleOptimization(isOptimized) {
-    useOptimization = isOptimized;
-    const withOptBtn = document.getElementById("toggleWithOpt");
-    const withoutOptBtn = document.getElementById("toggleWithoutOpt");
+            <!-- Card 1: Main Status -->
+            <div
+                class="md:col-span-1 glass-card rounded-xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <div id="statusBg" class="absolute inset-0 bg-neonBlue/5 opacity-50"></div>
+                <div id="statusIconContainer" class="p-4 rounded-full bg-white/5 mb-4 relative z-10">
+                    <i id="statusIcon" data-lucide="shield-check" class="w-12 h-12 text-gray-400"></i>
+                </div>
+                <h2 id="statusTitle" class="text-2xl font-bold text-white mb-1 relative z-10">READY</h2>
+                <p id="statusDesc" class="text-sm text-gray-400 relative z-10">Waiting for input</p>
+            </div>
 
-    if (isOptimized) {
-        withOptBtn.classList.remove("bg-[#3a3c38]", "text-gray-400");
-        withOptBtn.classList.add("bg-[#4d9c46]", "text-white");
-        withoutOptBtn.classList.remove("bg-[#4d9c46]", "text-white");
-        withoutOptBtn.classList.add("bg-[#3a3c38]", "text-gray-400");
-    } else {
-        withoutOptBtn.classList.remove("bg-[#3a3c38]", "text-gray-400");
-        withoutOptBtn.classList.add("bg-[#4d9c46]", "text-white");
-        withOptBtn.classList.remove("bg-[#4d9c46]", "text-white");
-        withOptBtn.classList.add("bg-[#3a3c38]", "text-gray-400");
-    }
-}
+            <!-- Card 2: Performance Metrics -->
+            <div class="md:col-span-2 glass-card rounded-xl p-6 relative">
+                <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-6 flex items-center gap-2">
+                    <i data-lucide="activity" class="w-4 h-4 text-neonBlue"></i> Performance Telemetry
+                </h3>
 
-async function checkUrl() {
-    const input = document.getElementById("urlInput").value;
-    const container = document.getElementById("resultContainer");
-    const safeBadge = document.getElementById("statusSafe");
-    const unsafeBadge = document.getElementById("statusUnsafe");
-    const loadingBadge = document.getElementById("statusLoading");
-    const metricsBox = document.getElementById("metricsBox");
-    const metricsTitle = document.getElementById("metricsTitle");
-    const backendMetrics = document.getElementById("backendMetrics");
-    const frontendMetrics = document.getElementById("frontendMetrics");
+                <div class="space-y-6">
+                    <!-- Backend Metric -->
+                    <div>
+                        <div class="flex justify-between text-xs mb-2">
+                            <span class="text-gray-300">Server Latency</span>
+                            <span id="backendTimeVal" class="text-neonBlue font-mono">0ms</span>
+                        </div>
+                        <div class="h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                            <div id="backendBar" class="h-full bg-neonBlue w-0 transition-all duration-1000 ease-out">
+                            </div>
+                        </div>
+                        <p id="backendDetails" class="mt-2 text-xs text-gray-500 font-mono h-4 leading-tight"></p>
+                    </div>
 
-    if (!input) return alert("INSERT URL!");
+                    <!-- Frontend Metric -->
+                    <div>
+                        <div class="flex justify-between text-xs mb-2">
+                            <span class="text-gray-300">Client Processing</span>
+                            <span id="frontendTimeVal" class="text-purple-400 font-mono">0ms</span>
+                        </div>
+                        <div class="h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                            <div id="frontendBar"
+                                class="h-full bg-purple-500 w-0 transition-all duration-1000 ease-out"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    // Start frontend time tracking
-    const frontendStartTime = performance.now();
+            <!-- Card 3: Detailed Logs (Horizontal span if content allows, or just bottom section) -->
+            <div class="md:col-span-3 glass-card rounded-xl p-6 font-mono text-xs text-gray-400">
+                <div class="flex items-center gap-2 mb-2 text-gray-500">
+                    <i data-lucide="terminal" class="w-3 h-3"></i>
+                    <span>SYSTEM LOGS</span>
+                </div>
+                <div id="consoleLog"
+                    class="h-20 overflow-y-auto space-y-1 p-2 bg-black/20 rounded border border-white/5">
+                    <div class="text-gray-600">> System initialized...</div>
+                    <div class="text-gray-600">> Waiting for scan request...</div>
+                </div>
+            </div>
 
-    container.classList.remove("hidden");
-    safeBadge.classList.add("hidden");
-    unsafeBadge.classList.add("hidden");
-    loadingBadge.classList.remove("hidden");
-    metricsBox.classList.add("hidden");
+        </div>
 
-    try {
-        // Choose endpoint based on optimization mode
-        const endpoint = useOptimization ? '/check' : '/find';
-        const response = await fetch(`${endpoint}?url=${encodeURIComponent(input)}`);
-        const data = await response.json();
+    </main>
 
-        // Calculate frontend total time
-        const frontendEndTime = performance.now();
-        const frontendTime = (frontendEndTime - frontendStartTime).toFixed(2);
+    <footer class="w-full border-t border-white/5 py-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-6 text-center text-xs text-gray-600">
+            <p>&copy; 2026 CYBER SENTINEL INC. ALL RIGHTS RESERVED.</p>
+        </div>
+    </footer>
 
-        loadingBadge.classList.add("hidden");
+    <script>
+        // Init Icons
+        lucide.createIcons();
 
-        // Check if URL is malicious
-        if (data.message === "Malicious") {
-            unsafeBadge.classList.remove("hidden");
-        } else {
-            safeBadge.classList.remove("hidden");
+        let useOptimization = true;
+
+        function toggleOptimization(isOptimized) {
+            useOptimization = isOptimized;
+            const withOptBtn = document.getElementById("toggleWithOpt");
+            const withoutOptBtn = document.getElementById("toggleWithoutOpt");
+
+            // Log change
+            logToConsole(`Switched engine to: ${isOptimized ? 'BLOOM FILTER (High Speed)' : 'DIRECT QUERY (Deep Scan)'}`);
+
+            if (isOptimized) {
+                withOptBtn.className = "px-4 py-1.5 rounded-md text-xs font-medium transition-all bg-white/10 text-neonBlue shadow-sm";
+                withoutOptBtn.className = "px-4 py-1.5 rounded-md text-xs font-medium text-gray-500 hover:text-white transition-all";
+            } else {
+                withoutOptBtn.className = "px-4 py-1.5 rounded-md text-xs font-medium transition-all bg-white/10 text-neonBlue shadow-sm";
+                withOptBtn.className = "px-4 py-1.5 rounded-md text-xs font-medium text-gray-500 hover:text-white transition-all";
+            }
         }
 
-        // Show metrics box with typewriter effect
-        metricsBox.classList.remove("hidden");
-        
-        // Update title based on mode
-        const modeText = useOptimization ? "Bloom Filter Metrics" : "Direct Query Metrics";
-        metricsTitle.textContent = modeText;
-        
-        // Extract backend time (remove " ms" if present)
-        const backendTime = data.responseTime.replace(" ms", "");
-        
-        // Display metrics with typewriter effect
-                const backendText = useOptimization
-        ? `Backend API response time: ${backendTime} ms.\nOptimizations reduced both API latency and database lookups by minimizing unnecessary DB calls.`
-        : `Database query time: ${backendTime} ms.\n There is Db call which use .find() query`;
-
-        typeWriterEffect(backendMetrics, backendText, () => {
-        setTimeout(() => {
-            typeWriterEffect(frontendMetrics, `Frontend total time: ${frontendTime} ms`);
-        }, 200);
-        });
-
-
-    } catch (error) {
-        loadingBadge.classList.add("hidden");
-        alert("ERROR: Connection failed!");
-        console.error(error);
-    }
-}
-
-function typeWriterEffect(element, text, callback) {
-    element.innerHTML = "";
-    let i = 0;
-    const speed = 30;
-
-    function typing() {
-        if (i < text.length) {
-            element.innerHTML += text.charAt(i);
-            i++;
-            setTimeout(typing, speed);
-        } else if (callback) {
-            callback();
+        function logToConsole(msg) {
+            const consoleDiv = document.getElementById("consoleLog");
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const p = document.createElement('div');
+            p.innerHTML = `<span class="text-gray-500">[${time}]</span> <span class="text-gray-300">> ${msg}</span>`;
+            consoleDiv.prepend(p);
         }
-    }
-    typing();
-}
-</script>
 
+        async function checkUrl() {
+            const input = document.getElementById("urlInput").value;
+            const container = document.getElementById("resultContainer");
+            const loading = document.getElementById("loadingState");
+
+            // Status Elements
+            const statusTitle = document.getElementById("statusTitle");
+            const statusDesc = document.getElementById("statusDesc");
+            const statusIcon = document.getElementById("statusIcon");
+            const statusIconContainer = document.getElementById("statusIconContainer");
+
+            // Metrics Elements
+            const backendBar = document.getElementById("backendBar");
+            const backendTimeVal = document.getElementById("backendTimeVal");
+            const backendDetails = document.getElementById("backendDetails");
+
+            const frontendBar = document.getElementById("frontendBar");
+            const frontendTimeVal = document.getElementById("frontendTimeVal");
+
+            if (!input) {
+                logToConsole("Error: Empty input detected.");
+                alert("Please enter a valid URL.");
+                return;
+            }
+
+            // Reset State for Animation
+            container.classList.add("hidden");
+            loading.classList.remove("hidden");
+            logToConsole(`Initiating scan for: ${input}`);
+
+            const frontendStartTime = performance.now();
+
+            try {
+                const endpoint = useOptimization ? '/check' : '/find';
+                const response = await fetch(`${endpoint}?url=${encodeURIComponent(input)}`);
+                const data = await response.json();
+
+                const frontendEndTime = performance.now();
+                const frontendTime = (frontendEndTime - frontendStartTime).toFixed(2);
+                const backendTime = parseFloat(data.responseTime.replace(" ms", ""));
+
+                // artificial delay for "scanning" feel if too fast
+                if (frontendTime < 500) await new Promise(r => setTimeout(r, 600));
+
+                loading.classList.add("hidden");
+                container.classList.remove("hidden");
+
+                // Re-init hidden icons
+                lucide.createIcons();
+
+                // UPDATE STATUS CARD
+                const msg = data.message.toLowerCase();
+                if (msg === "safe") {
+                    statusTitle.innerText = "SECURE";
+                    statusTitle.className = "text-2xl font-bold text-neonGreen mb-1 relative z-10";
+                    statusDesc.innerText = "No threats detected in signature database.";
+                    statusIconContainer.className = "p-4 rounded-full bg-neonGreen/10 mb-4 relative z-10";
+                    statusIcon.setAttribute("data-lucide", "shield-check");
+                    statusIcon.className = "w-12 h-12 text-neonGreen";
+                    logToConsole("Result: CLEAN. URL is safe to visit.");
+                } else {
+                    statusTitle.innerText = data.message.toUpperCase();
+                    statusTitle.className = "text-2xl font-bold text-neonRed mb-1 relative z-10";
+                    statusDesc.innerText = "Critical threat signature matched.";
+                    statusIconContainer.className = "p-4 rounded-full bg-neonRed/10 mb-4 relative z-10 animate-pulse";
+                    statusIcon.setAttribute("data-lucide", "alert-triangle");
+                    statusIcon.className = "w-12 h-12 text-neonRed";
+                    logToConsole(`Result: THREAT DETECTED [${data.message.toUpperCase()}].`);
+                }
+                lucide.createIcons(); // Updates the new icon attr
+
+                // UPDATE METRICS
+                // Animate Bars
+                // Max scale reference: let's say 100ms is full bar for visual
+                const bePct = Math.min((backendTime / 100) * 100, 100);
+                const fePct = Math.min((frontendTime / 100) * 100, 100);
+
+                setTimeout(() => {
+                    backendBar.style.width = `${bePct}%`;
+                    frontendBar.style.width = `${fePct}%`;
+                }, 100);
+
+                backendTimeVal.innerText = `${backendTime} ms`;
+                frontendTimeVal.innerText = `${frontendTime} ms`;
+
+                backendDetails.innerText = useOptimization
+                    ? "Bloom Filter Optimization Active: Memory-efficient probabilistic lookup."
+                    : "Direct DB Query: Full collection scan (slower).";
+
+            } catch (error) {
+                loading.classList.add("hidden");
+                console.error(error);
+                logToConsole("CRITICAL ERROR: Connection to scanning engine failed.");
+                alert("Connection Failed");
+            }
+        }
+    </script>
 </body>
+
 </html>
