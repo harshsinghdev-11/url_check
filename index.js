@@ -4,9 +4,12 @@ import path from "path"
 import dotenv from "dotenv"
 
 import { connectDb } from "./config/db.js"
+
+//bloom filter related
 import bloomfilterProject from "./model/bloomfilterProject.js";
 import { initBloomFilter } from "./utility/initBloomFilter.js";
 import { getBloomFilter } from "./utility/initBloomFilter.js";
+import {startBloomAutoSave} from "./utility/bloomAutoSave.js";
 
 import { apiLimiter } from "./middleware/rateLimiter.js";
 
@@ -27,6 +30,7 @@ app.use(express.static("public"))
 
 //init bloom filter
 await initBloomFilter();
+startBloomAutoSave();
 
 //init cache
 
@@ -48,44 +52,39 @@ app.get("/count",async(req,res)=>{
     res.json({count})
 })
 
+
+
 //bloom filter query
-app.get("/check", async (req, res) => {
-    const startTime = performance.now();
-    const url = req.query.url;
-    const bf = await getBloomFilter();
-    const mayBeMalicious = bf.contains(url);
+app.post("/addUrl", async (req, res) => {
+    try {
+        const { url } = req.body;
 
-    if (!mayBeMalicious) {
-        const endTime = performance.now();
-        return res.json({
-            message: "Safe",
-            responseTime: `${(endTime - startTime).toFixed(2)} ms`
-        });
-    }
-    const normalizedUrl = url.trim().toLowerCase();
-    const cached = cache.get(normalizedUrl);
-    if(cached){
-        const endTime = performance.now();
-        return res.json({
-            message:"Not safe",
-            type:cached,
-            responseTime: `${(endTime - startTime).toFixed(2)} ms`
-        });
-    }
-   const record = await bloomfilterProject.findOne({url}).lean();
+        if (!url) {
+            return res.status(400).json({ error: "URL is required" });
+        }
 
-   let result;
-    if(record){
-        result = record.type;
-    }else{
-        result:"Safe";
+        const bf = getBloomFilter();
+        if (!bf) {
+            return res.status(500).json({ error: "Bloom filter not initialized" });
+        }
+
+        
+        const normalizedUrl = url.trim().toLowerCase();
+
+        const alreadyExists = bf.contains(normalizedUrl);
+        bf.add(normalizedUrl);
+
+        return res.status(200).json({
+            message: alreadyExists
+                ? "URL probably already present in Bloom Filter"
+                : "URL added to Bloom Filter",
+            alreadyExists
+        });
+
+    } catch (err) {
+        console.error("Add URL error:", err);
+        res.status(500).json({ error: "Internal server error" });
     }
-    cache.put(normalizedUrl,result);
-    const endTime = performance.now();
-    return res.json({
-        message:result,
-        responseTime: `${(endTime - startTime).toFixed(2)} ms`
-    })
 });
 
 
@@ -117,7 +116,7 @@ app.get("/find",async(req,res)=>{
 
 
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT,()=>{
     console.log(`server is running on ${PORT}`)
