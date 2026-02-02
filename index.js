@@ -32,7 +32,6 @@ app.use(express.static("public"))
 await initBloomFilter();
 startBloomAutoSave();
 
-//init cache
 
 
 app.use("/find",apiLimiter)
@@ -85,6 +84,48 @@ app.post("/addUrl", async (req, res) => {
         console.error("Add URL error:", err);
         res.status(500).json({ error: "Internal server error" });
     }
+});
+
+
+app.get("/check", async (req, res) => {
+    const startTime = performance.now();
+    const url = req.query.url;
+    const bf = await getBloomFilter();
+    const mayBeMalicious = bf.contains(url);
+
+    if (!mayBeMalicious) {
+        const endTime = performance.now();
+        return res.json({
+            message: "Safe",
+            responseTime: `${(endTime - startTime).toFixed(2)} ms`
+        });
+    }
+
+const normalizedUrl = url.trim().toLowerCase();
+
+const cached = cache.get(normalizedUrl);
+    if(cached){
+        const endTime = performance.now();
+        return res.json({
+            message:"Not safe",
+            type:cached,
+            responseTime: `${(endTime - startTime).toFixed(2)} ms`
+        });
+    }
+   const record = await bloomfilterProject.findOne({url}).lean();
+
+   let result;
+    if(record){
+        result = record.type;
+    }else{
+        result:"Safe";
+    }
+    cache.put(normalizedUrl,result);
+    const endTime = performance.now();
+    return res.json({
+        message:result,
+        responseTime: `${(endTime - startTime).toFixed(2)} ms`
+    })
 });
 
 
