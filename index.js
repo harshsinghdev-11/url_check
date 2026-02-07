@@ -7,11 +7,10 @@ import { connectDb } from "./config/db.js"
 
 //bloom filter related
 import bloomfilterProject from "./model/bloomfilterProject.js";
-import { initBloomFilter } from "./utility/initBloomFilter.js";
-import { getBloomFilter } from "./utility/initBloomFilter.js";
+import { initBloomFilters } from "./utility/initBloomFilter.js";
 
 //for auto save
-import {startBloomAutoSave} from "./utility/bloomAutoSave.js";
+// import {startBloomAutoSave} from "./utility/bloomAutoSave.js";
 
 //rate limiter
 import { apiLimiter } from "./middleware/rateLimiter.js";
@@ -22,12 +21,12 @@ import cache from "./utility/initLRU.js"
 
 dotenv.config();
 const app = express();
-connectDb();
+await connectDb();
 
 //routes 
 import healthCheckRouter from "./routes/healthCheckRoutes.js";
 import readBfRoutes from "./routes/readBfRoutes.js";
-import writeBfRoutes from "./routes/writeBfRoutes.js";
+// import writeBfRoutes from "./routes/writeBfRoutes.js";
 import dbReadRoutes from "./routes/dbReadRoutes.js";
 
 
@@ -40,8 +39,8 @@ app.use(apiLimiter);
 
 
 //init bloom filter
-await initBloomFilter();
-startBloomAutoSave();
+await initBloomFilters();
+// startBloomAutoSave();
 
 
 //home routes
@@ -54,7 +53,7 @@ app.get("/",(req,res)=>{
 
 app.use(healthCheckRouter);
 app.use(readBfRoutes);
-app.use(writeBfRoutes);
+// app.use(writeBfRoutes);
 
 //without bloom filter query
 //db call

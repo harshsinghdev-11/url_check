@@ -1,44 +1,93 @@
 import mongoose from "mongoose";
-import bloomfilterArray from "../model/bloomfilterArray.js";
-import bloomfilterProject from "../model/bloomfilterProject.js";
-import BloomFilter from "./bloomfilter.js";
-import { connectDb } from "../config/db.js";
 import dotenv from "dotenv";
+import BloomFilter from "./bloomfilter.js";
+import bloomfilterProject from "../model/bloomfilterProject.js";
+import bloomfilterArray from "../model/bloomfilterArray.js";
+
 dotenv.config();
-const MONGO_URI=process.env.MONGO_URI;
-const buildBloomFilter = async ()=>{
-    await mongoose.connect(process.env.MONGO_URI)
-  
-    const totalDoc = await bloomfilterProject.countDocuments();
 
-    const size = Math.ceil(totalDoc * 15);  // good approx
-    const hashCount = 7;
+const MONGO_URI = process.env.MONGO_URI;
+const HASH_COUNT = 7;
+const BITS_PER_ITEM = 15;
 
-    const bloom = new BloomFilter(size, hashCount);
+const buildBloomFilters = async () => {
+  try {
 
-    const cursor = bloomfilterProject.find({},{url:1}).cursor();
+    await mongoose.connect(MONGO_URI);
+    console.log("MongoDB connected");
 
-    let processed = 0;
+
+    const [maliciousCount, benignCount] = await Promise.all([
+      bloomfilterProject.countDocuments({
+        type: { $in: ["phishing", "malware", "defacement"] }
+      }),
+      bloomfilterProject.countDocuments({ type: "benign" })
+    ]);
+
+
+    const maliciousBloom = new BloomFilter(
+      Math.ceil(maliciousCount * BITS_PER_ITEM),
+      HASH_COUNT
+    );
+
+    const benignBloom = new BloomFilter(
+      Math.ceil(benignCount * BITS_PER_ITEM),
+      HASH_COUNT
+    );
+
+
+    const cursor = bloomfilterProject.find(
+      { type: { $in: ["benign", "phishing", "malware", "defacement"] } },
+      { url: 1, type: 1 }
+    ).cursor();
+
+    let maliciousInserted = 0;
+    let benignInserted = 0;
+
     for await (const doc of cursor) {
-        bloom.add(doc.url);
-        processed++;
+      if (!doc?.url) continue;
 
-        if (processed % 50000 === 0) {
-      
-            await new Promise(resolve => setTimeout(resolve, 0)); // yield event loop
-        }
+      if (doc.type === "benign") {
+        benignBloom.add(doc.url);
+        benignInserted++;
+      } else {
+        maliciousBloom.add(doc.url);
+        maliciousInserted++;
+      }
+
+      if ((maliciousInserted + benignInserted) % 50000 === 0) {
+        await new Promise(r => setTimeout(r, 0));
+      }
     }
 
 
-
-    const bloomDoc = new bloomfilterArray({
-        bitArray:Buffer.from(bloom.bits),
-        hashCount:7,
-        totalUrls:totalDoc,
-        size,
-    })
     await bloomfilterArray.deleteMany({});
-    await bloomDoc.save();
-    mongoose.connection.close();
-}
-buildBloomFilter();
+
+    await bloomfilterArray.insertMany([
+      {
+        type: "MALICIOUS",
+        bitArray: Buffer.from(maliciousBloom.bits),
+        size: maliciousBloom.size,
+        hashCount: HASH_COUNT,
+        totalUrls: maliciousInserted,
+        createdAt: new Date()
+      },
+      {
+        type: "BENIGN",
+        bitArray: Buffer.from(benignBloom.bits),
+        size: benignBloom.size,
+        hashCount: HASH_COUNT,
+        totalUrls: benignInserted,
+        createdAt: new Date()
+      }
+    ]);
+
+    console.log("Bloom filters stored successfully");
+  } catch (err) {
+    console.error("Bloom build failed:", err);
+  } finally {
+    await mongoose.connection.close();
+  }
+};
+
+buildBloomFilters();
