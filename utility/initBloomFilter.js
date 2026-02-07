@@ -1,16 +1,39 @@
 import BloomFilter from "./bloomfilter.js";
-import bloomfilterArray from "../model/bloomfilterArray.js";
+import BloomFilterModel from "../model/bloomfilterArray.js";
 
-let bloomFilter;
+const bloomFilters = {
+  MALICIOUS: null,
+  BENIGN: null
+};
 
-export const initBloomFilter = async ()=>{
-    const doc = await bloomfilterArray.findOne();
-    if(!doc) throw new Error("Bloom filter not found in DB");
-        
-    bloomFilter = new BloomFilter(doc.size,doc.hashCount);
-    bloomFilter.bits = new Uint8Array(doc.bitArray.buffer);
+export const initBloomFilters = async () => {
+  const docs = await BloomFilterModel.find({
+    type: { $in: ["MALICIOUS", "BENIGN"] }
+  });
 
-  
-}
+  if (docs.length !== 2) {
+    throw new Error("Both MALICIOUS and BENIGN Bloom filters must exist in DB");
+  }
 
-export const getBloomFilter = ()=>bloomFilter;
+  for (const doc of docs) {
+    const bf = new BloomFilter(doc.size, doc.hashCount,doc.type);
+    bf.bits = new Uint8Array(doc.bitArray.buffer);
+    bloomFilters[doc.type] = bf;
+  }
+
+  console.log("Bloom filters added into memory");
+};
+
+export const getMaliciousBloomFilter = () => {
+  if (!bloomFilters.MALICIOUS) {
+    throw new Error("Malicious Bloom filter not initialized");
+  }
+  return bloomFilters.MALICIOUS;
+};
+
+export const getBenignBloomFilter = () => {
+  if (!bloomFilters.BENIGN) {
+    throw new Error("Benign Bloom filter not initialized");
+  }
+  return bloomFilters.BENIGN;
+};

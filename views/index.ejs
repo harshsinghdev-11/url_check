@@ -339,7 +339,16 @@
                     statusIcon.setAttribute("data-lucide", "shield-check");
                     statusIcon.className = "w-12 h-12 text-neonGreen";
                     logToConsole("Result: CLEAN. URL is safe to visit.");
-                } else {
+                }else if(msg==="benign"){
+                    statusTitle.innerText = "SECURE";
+                    statusTitle.className = "text-2xl font-bold text-neonGreen mb-1 relative z-10";
+                    statusDesc.innerText = "No threats detected in signature database.";
+                    statusIconContainer.className = "p-4 rounded-full bg-neonGreen/10 mb-4 relative z-10";
+                    statusIcon.setAttribute("data-lucide", "shield-check");
+                    statusIcon.className = "w-12 h-12 text-neonGreen";
+                    logToConsole("Result: CLEAN. URL is safe to visit.");
+                }
+                else {
                     statusTitle.innerText = data.message.toUpperCase();
                     statusTitle.className = "text-2xl font-bold text-neonRed mb-1 relative z-10";
                     statusDesc.innerText = "Critical threat signature matched.";

@@ -25,7 +25,13 @@ const bloomfilterArray = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    type: {
+    type: String,
+    enum: ["MALICIOUS", "BENIGN"],
+    required: true,
+    index: true
+  },
 })
 
 export default mongoose.model("bloomfilterArray",bloomfilterArray);

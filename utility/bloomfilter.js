@@ -1,9 +1,10 @@
 class BloomFilter {
-    constructor(size, hashCount) {
+    constructor(size, hashCount,type) {
         this.size = size;
         this.hashCount = hashCount;
         this.bits = new Uint8Array(Math.ceil(size / 8));
         this.isDirty = false;
+        this.type = type
     }
 
     // --- FNV-1a ---
