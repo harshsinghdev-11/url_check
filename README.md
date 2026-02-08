@@ -52,16 +52,16 @@ The system extracts **14 lexical features** from every URL for the AI model:
 
 ```mermaid
 graph TD
-    A[Client Request] --> B{LRU Cache?}
+    A[Client Request] --> B{"LRU Cache?"}
     B -- Yes --> C[Return Cached Result]
-    B -- No --> D{Bloom Filter (Malicious)?}
-    D -- Yes --> E[Check MongoDB (Verify Type)]
+    B -- No --> D{"Bloom Filter (Malicious)?"}
+    D -- Yes --> E["Check MongoDB (Verify Type)"]
     E --> F[Return Malicious/Type]
-    D -- No --> G{Bloom Filter (Benign)?}
+    D -- No --> G{"Bloom Filter (Benign)?"}
     G -- Yes --> H[Return Safe]
     G -- No --> I[Run ONNX AI Model]
     I --> J[Feature Extraction]
-    J --> K[Inference (Phishing/Malware/Defacement)]
+    J --> K["Inference (Phishing/Malware/Defacement)"]
     K --> L[Return ML Prediction]
 ```
 
